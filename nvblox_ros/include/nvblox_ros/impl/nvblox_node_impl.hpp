@@ -81,6 +81,10 @@ void NvbloxNode::processMessageQueue(
         get_logger(), clk, kLostMessagesPublishPeriodMs,
         "Deleted " << num_messages_lost << "because we could not interpolate transforms.");
     }
+
+    // Hack to process only the last valid message
+    items_to_process.clear();
+    items_to_process.push_back(*it_last_valid);
   }
   lock.unlock();
 

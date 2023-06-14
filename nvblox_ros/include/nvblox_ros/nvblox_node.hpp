@@ -40,6 +40,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
 #include "nvblox_ros/conversions/image_conversions.hpp"
@@ -87,6 +88,14 @@ public:
   void loadMap(
     const std::shared_ptr<nvblox_msgs::srv::FilePath::Request> request,
     std::shared_ptr<nvblox_msgs::srv::FilePath::Response> response);
+
+  // Adding methods for integrating single image and map resetting
+  void integrateSingleImageCallback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+            const std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  
+  void resetMapperCallaback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+            const std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+
 
   // Does whatever processing there is to be done, depending on what
   // transforms are available.
@@ -215,6 +224,10 @@ protected:
   rclcpp::Service<nvblox_msgs::srv::FilePath>::SharedPtr save_ply_service_;
   rclcpp::Service<nvblox_msgs::srv::FilePath>::SharedPtr save_map_service_;
   rclcpp::Service<nvblox_msgs::srv::FilePath>::SharedPtr load_map_service_;
+
+  // Adding services for integrating single image and map resetting
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr integrate_single_image_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_mapper_service_;
 
   // Callback groups.
   rclcpp::CallbackGroup::SharedPtr group_processing_;

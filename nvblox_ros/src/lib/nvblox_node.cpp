@@ -278,15 +278,59 @@ void NvbloxNode::advertiseServices()
       &NvbloxNode::loadMap, this, std::placeholders::_1,
       std::placeholders::_2),
     rmw_qos_profile_services_default, group_processing_);
+
+  integrate_single_image_service_ = create_service<std_srvs::srv::Trigger>(
+    "~/integrate_single_image",
+    std::bind(
+      &NvbloxNode::integrateSingleImageCallback, this, std::placeholders::_1,
+      std::placeholders::_2),
+    rmw_qos_profile_services_default, group_processing_);
+
+  reset_mapper_service_ = create_service<std_srvs::srv::Trigger>(
+    "~/reset_mapper",
+    std::bind(
+      &NvbloxNode::resetMapperCallaback, this, std::placeholders::_1,
+      std::placeholders::_2),
+    rmw_qos_profile_services_default, group_processing_);
+
 }
 
+void NvbloxNode::integrateSingleImageCallback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+            const std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+    if (use_depth_) {
+      processDepthQueue();
+    }
+    response->success = true;
+    response->message = "success";
+  }
+
+void NvbloxNode::resetMapperCallaback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+            const std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+    LayerCake &layer_cake_ = mapper_->layers();
+    layer_cake_.clear();
+
+    LayerCake newCake = LayerCake::create<TsdfLayer, ColorLayer, OccupancyLayer, EsdfLayer,
+                            MeshLayer>(voxel_size_, MemoryType::kDevice);
+
+    layer_cake_ = std::move(newCake);
+
+    mesh_subscriber_count_ = 0;
+
+    response->success = true;
+    response->message = "success";
+}
+
+
+/// Disabling the continuous depth map integration
 void NvbloxNode::setupTimers()
 {
   RCLCPP_INFO_STREAM(get_logger(), "NvbloxNode::setupTimers()");
   if (use_depth_) {
-    depth_processing_timer_ = create_wall_timer(
-      std::chrono::duration<double>(1.0 / max_poll_rate_hz_),
-      std::bind(&NvbloxNode::processDepthQueue, this), group_processing_);
+    //depth_processing_timer_ = create_wall_timer(
+    //  std::chrono::duration<double>(1.0 / max_poll_rate_hz_),
+    //  std::bind(&NvbloxNode::processDepthQueue, this), group_processing_);
   }
   if (use_color_) {
     color_processing_timer_ = create_wall_timer(
