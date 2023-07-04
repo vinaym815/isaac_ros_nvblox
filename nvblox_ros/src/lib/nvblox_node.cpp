@@ -59,7 +59,7 @@ NvbloxNode::NvbloxNode(
   // - Integrators
   const std::string mapper_name = "mapper";
   declareMapperParameters(mapper_name, this);
-  mapper_ = std::make_shared<Mapper>(
+  mapper_ = std::make_shared<MapperExtended>(
     voxel_size_, MemoryType::kDevice,
     static_projective_layer_type_);
   initializeMapper(mapper_name, mapper_.get(), this);
@@ -854,6 +854,9 @@ void NvbloxNode::savePly(
   // If we get a full path, then write to that path.
   bool success = false;
   if (ends_with(request->file_path, ".ply")) {
+    const LayerCake &layer_cake = mapper_->layers();
+    mapper_->updateMesh();
+
     success =
       io::outputMeshLayerToPly(mapper_->mesh_layer(), request->file_path);
   } else {

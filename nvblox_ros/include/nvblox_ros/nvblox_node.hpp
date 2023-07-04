@@ -54,6 +54,49 @@
 namespace nvblox
 {
 
+class MapperExtended : public Mapper
+{
+  public:
+
+  MapperExtended(const float voxel_size, const MemoryType memory_type,
+    const ProjectiveLayerType projective_layer_type) : 
+    Mapper(voxel_size, memory_type, projective_layer_type) {}
+
+  std::vector<Index3D> updateMesh(){
+    std::vector<Index3D> mesh_blocks_to_update_vector(
+      mesh_blocks_to_update_.begin(), mesh_blocks_to_update_.end());
+    
+    LayerCake &layer_cake = this->layers();
+
+    if(mesh_blocks_to_update_vector.size() == 0){
+      return mesh_blocks_to_update_vector;
+    }
+
+    // Number of stages for GPU integration    
+    int n_stages = 3;
+    auto div = std::div(mesh_blocks_to_update_vector.size(), n_stages);
+    const int block_size = div.quot;
+    n_stages += (div.rem>0);
+
+    for (int i=0; i<n_stages; ++i){
+      auto start = mesh_blocks_to_update_vector.begin() + i*block_size;
+      int i_block_size = (i==n_stages-1) ? div.rem : block_size;
+      std::vector<Index3D> i_mesh_chunk(start, start+i_block_size);
+
+      mesh_integrator_.integrateBlocksGPU(layer_cake.get<TsdfLayer>(),
+        i_mesh_chunk, layer_cake.getPtr<MeshLayer>());
+    }
+
+    // Marks blocks as updated
+    mesh_blocks_to_update_.clear();
+
+    return mesh_blocks_to_update_vector;
+  }
+
+  private:
+   MeshIntegrator mesh_integrator_;
+};
+
 class NvbloxNode : public rclcpp::Node
 {
 public:
@@ -305,7 +348,7 @@ protected:
   // Mapper
   // Holds the map layers and their associated integrators
   // - TsdfLayer, ColorLayer, EsdfLayer, MeshLayer
-  std::shared_ptr<Mapper> mapper_;
+  std::shared_ptr<MapperExtended> mapper_;
 
   // The most important part: the ROS converter. Just holds buffers as state.
   conversions::LayerConverter layer_converter_;
